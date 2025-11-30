@@ -16,6 +16,13 @@ export default defineConfig({
     commonjsOptions: {
       include: [/@mediapipe/, /node_modules/],
       transformMixedEsModules: true
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'mediapipe-hands': ['@mediapipe/hands']
+        }
+      }
     }
   }
 })
