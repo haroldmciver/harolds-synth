@@ -2,7 +2,7 @@
 
 A hand-controlled synthesizer that uses webcam hand tracking to control audio parameters in real-time.
 
-https://harolds-synth.vercel.app/
+https://haroldssynth.com
 
 ## Features
 
