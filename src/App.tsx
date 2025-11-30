@@ -30,6 +30,7 @@ function App() {
   const [rootMidi, setRootMidi] = useState(48); // C4, default to C minor 7
   const [chordExtension, setChordExtension] = useState<7 | 9>(7); // 7th or 9th chord
   const [chordQuality, setChordQuality] = useState<'minor' | 'major'>('minor'); // Minor or major
+  const [showInstructions, setShowInstructions] = useState(false);
   
   // Refs
   const synthEngineRef = useRef<SynthEngine | null>(null);
@@ -728,6 +729,50 @@ function App() {
               </span>
             </div>
           </div>
+
+          <div className="help-container">
+            <button 
+              className={`help-button ${showInstructions ? 'active' : ''}`}
+              onClick={() => setShowInstructions(!showInstructions)}
+              title="How to play"
+            >
+              ?
+            </button>
+
+            {showInstructions && (
+              <div className="inline-instructions">
+                <div className="instruction-section">
+                  <h3>Pitch Control (Pinch Gestures)</h3>
+                  <ul>
+                    <li><strong>Right Thumb + Index:</strong> +1 Semitone</li>
+                    <li><strong>Right Thumb + Pinky:</strong> +2 Semitones</li>
+                    <li><strong>Left Thumb + Index:</strong> -1 Semitone</li>
+                    <li><strong>Left Thumb + Pinky:</strong> -2 Semitones</li>
+                  </ul>
+                </div>
+                
+                <div className="instruction-section">
+                  <h3>Chord Control</h3>
+                  <ul>
+                    <li><strong>Left Thumb + Ring:</strong> Switch 7th / 9th Chord</li>
+                  </ul>
+                </div>
+
+                <div className="instruction-section">
+                  <h3>Effects (Hand Position)</h3>
+                  <ul>
+                    <li><strong>Right Hand X:</strong> LFO Rate</li>
+                    <li><strong>Right Hand Y:</strong> Filter Cutoff</li>
+                    <li><strong>Left Hand Y:</strong> LFO Depth</li>
+                  </ul>
+                </div>
+                
+                <p className="instruction-note">
+                  Move hands up/down and side-to-side to explore effects!
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="right-panel">
@@ -760,6 +805,7 @@ function App() {
           </div>
         </div>
       </div>
+      {/* Instructions removed from here as they are now inline */}
     </div>
   );
 }
