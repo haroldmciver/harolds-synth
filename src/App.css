@@ -56,6 +56,49 @@ h1 {
   gap: 12px;
 }
 
+.chord-extension-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.chord-extension-label {
+  font-size: 0.9rem;
+  color: #aaa;
+  font-weight: 500;
+}
+
+.chord-extension-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.chord-extension-button {
+  flex: 1;
+  padding: 12px 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: #2a2a2a;
+  color: #aaa;
+  border: 2px solid #444;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chord-extension-button:hover {
+  background: #333;
+  border-color: #666;
+  color: #fff;
+}
+
+.chord-extension-button.active {
+  background: #ff4444;
+  border-color: #ff4444;
+  color: white;
+}
+
 .start-stop-button {
   padding: 12px 32px;
   font-size: 1.1rem;

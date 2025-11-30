@@ -20,7 +20,8 @@ export class SynthEngine {
 
   // Chord parameters
   private rootMidi: number = 48; // C4 = MIDI note 48 (default: C minor 7)
-  private chordQuality: 'minor7' | 'major7' = 'minor7';
+  private chordExtension: 7 | 9 = 7; // Chord extension: 7th or 9th
+  private chordQuality: 'minor' | 'major' = 'minor'; // Minor or major quality
   
   // Filter parameters
   private maxCutoff: number = 1000; // Max cutoff frequency (controlled by right hand Y)
@@ -152,7 +153,7 @@ export class SynthEngine {
       this.gainNode.gain.setValueAtTime(0, now);
     }
 
-    // Create 4 oscillators for the chord with custom periodic wave
+    // Create oscillators for the chord with custom periodic wave
     if (!this.filter) {
       throw new Error('Filter not initialized');
     }
@@ -177,15 +178,28 @@ export class SynthEngine {
   }
 
   /**
-   * Calculate frequencies for the current chord (rootMidi + chordQuality)
-   * @returns Array of 4 frequencies in Hz
+   * Calculate frequencies for the current chord (rootMidi + chordExtension + chordQuality)
+   * @returns Array of frequencies in Hz (2 for 5th, 4 for 7th, 5 for 9th)
    */
   private getChordFrequencies(): number[] {
     // Chord intervals in semitones from root
-    const minor7Intervals = [0, 3, 7, 10]; // Root, minor 3rd, 5th, minor 7th
-    const major7Intervals = [0, 4, 7, 11]; // Root, major 3rd, 5th, major 7th
+    let intervals: number[] = [];
     
-    const intervals = this.chordQuality === 'minor7' ? minor7Intervals : major7Intervals;
+    if (this.chordExtension === 7) {
+      // 7th chord
+      if (this.chordQuality === 'minor') {
+        intervals = [0, 3, 7, 10]; // Root, minor 3rd, 5th, minor 7th
+      } else {
+        intervals = [0, 4, 7, 11]; // Root, major 3rd, 5th, major 7th
+      }
+    } else if (this.chordExtension === 9) {
+      // 9th chord
+      if (this.chordQuality === 'minor') {
+        intervals = [0, 3, 7, 10, 14]; // Root, minor 3rd, 5th, minor 7th, 9th
+      } else {
+        intervals = [0, 4, 7, 11, 14]; // Root, major 3rd, 5th, major 7th, 9th
+      }
+    }
     
     // Convert MIDI notes to frequencies
     // Formula: frequency = 440 * 2^((midiNote - 69) / 12)
@@ -197,33 +211,78 @@ export class SynthEngine {
 
 
   /**
-   * Set the chord root and quality, updating oscillators smoothly
+   * Set the chord root, extension, and quality, updating oscillators smoothly
    * @param rootMidi MIDI note number (36-84)
-   * @param quality 'minor7' or 'major7'
+   * @param extension 5, 7, or 9
+   * @param quality 'minor' or 'major'
    */
-  setChord(rootMidi: number, quality: 'minor7' | 'major7'): void {
+  setChord(rootMidi: number, extension: 7 | 9, quality: 'minor' | 'major'): void {
     // Clamp rootMidi to reasonable range (C2 to C6)
     const clampedRoot = Math.max(36, Math.min(84, rootMidi));
     
-    const chordChanged = this.rootMidi !== clampedRoot || this.chordQuality !== quality;
+    const chordChanged = 
+      this.rootMidi !== clampedRoot || 
+      this.chordExtension !== extension || 
+      this.chordQuality !== quality;
     
     if (!chordChanged) {
       return; // No change needed
     }
 
+    const oldExtension = this.chordExtension;
+    const oldOscillatorCount = this.getOscillatorCount(oldExtension);
+    
     this.rootMidi = clampedRoot;
+    this.chordExtension = extension;
     this.chordQuality = quality;
 
-    // Update oscillator frequencies if playing
-    if (this.isPlaying && this.oscillators.length === 4) {
+    const newOscillatorCount = this.getOscillatorCount(extension);
+    
+    // If oscillator count changed, we need to recreate oscillators
+    if (this.isPlaying && oldOscillatorCount !== newOscillatorCount) {
+      // Stop old oscillators
+      this.oscillators.forEach((osc) => {
+        try {
+          osc.stop();
+        } catch (e) {
+          // Oscillator might already be stopped
+        }
+      });
+      
+      // Create new oscillators with correct count
+      const frequencies = this.getChordFrequencies();
+      this.oscillators = frequencies.map((freq) => {
+        const oscillator = this.audioContext!.createOscillator();
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sawtooth';
+        oscillator.connect(this.filter!);
+        // Apply current waveform morph to new oscillators
+        this.applyWaveform(oscillator, this.currentWaveformMorph);
+        oscillator.start();
+        return oscillator;
+      });
+    } else if (this.isPlaying && this.oscillators.length === newOscillatorCount) {
+      // Same count, just update frequencies
       const newFrequencies = this.getChordFrequencies();
       const now = this.audioContext?.currentTime || 0;
       
       // Smoothly transition frequencies to avoid clicks
       this.oscillators.forEach((osc, index) => {
-        osc.frequency.linearRampToValueAtTime(newFrequencies[index], now + 0.05);
+        if (index < newFrequencies.length) {
+          osc.frequency.linearRampToValueAtTime(newFrequencies[index], now + 0.05);
+        }
       });
     }
+  }
+
+  /**
+   * Get the number of oscillators needed for a chord extension
+   */
+  private getOscillatorCount(extension: 5 | 7 | 9): number {
+    if (extension === 5) return 2;
+    if (extension === 7) return 4;
+    if (extension === 9) return 5;
+    return 4; // Default to 7th
   }
 
   /**
@@ -234,10 +293,37 @@ export class SynthEngine {
   }
 
   /**
+   * Get current chord extension
+   */
+  getChordExtension(): 5 | 7 | 9 {
+    return this.chordExtension;
+  }
+
+  /**
    * Get current chord quality
    */
-  getChordQuality(): 'minor7' | 'major7' {
+  getChordQuality(): 'minor' | 'major' {
     return this.chordQuality;
+  }
+
+  /**
+   * Set chord extension (5, 7, or 9)
+   */
+  setChordExtension(extension: 7 | 9): void {
+    if (this.chordExtension === extension) {
+      return;
+    }
+    this.setChord(this.rootMidi, extension, this.chordQuality);
+  }
+
+  /**
+   * Set chord quality (minor or major)
+   */
+  setChordQuality(quality: 'minor' | 'major'): void {
+    if (this.chordQuality === quality) {
+      return;
+    }
+    this.setChord(this.rootMidi, this.chordExtension, quality);
   }
 
   /**
@@ -377,6 +463,18 @@ export class SynthEngine {
   }
 
   /**
+   * Set the LFO depth (controlled by left hand Y position)
+   * @param depth Depth value between 0.0 (minimal modulation) and 1.0 (full modulation)
+   */
+  setLfoDepth(depth: number): void {
+    // Clamp to reasonable range (0.1 = 10% to 1.0 = 100%)
+    const clampedDepth = Math.max(0.1, Math.min(1.0, depth));
+    this.lfoDepth = clampedDepth;
+    // Update the actual LFO gain based on new depth
+    this.updateLfoDepth();
+  }
+
+  /**
    * Get current max cutoff
    */
   getMaxCutoff(): number {
@@ -388,6 +486,13 @@ export class SynthEngine {
    */
   getLfoRate(): number {
     return this.currentLfoRate;
+  }
+
+  /**
+   * Get current LFO depth
+   */
+  getLfoDepth(): number {
+    return this.lfoDepth;
   }
 
   /**

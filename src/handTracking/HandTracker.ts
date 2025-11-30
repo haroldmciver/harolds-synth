@@ -19,6 +19,7 @@ export interface HandData {
   pinchUp: boolean; // true if thumb and index finger are pinched (for pitch up +1)
   pinchDown: boolean; // true if thumb and middle finger are pinched (for pitch down -1)
   pinchPinky: boolean; // true if thumb and pinky are pinched (for pitch ±2)
+  pinchRing: boolean; // true if thumb and ring finger are pinched (for chord extension toggle)
 }
 
 export interface HandDetectionResult {
@@ -104,14 +105,64 @@ export class HandTracker {
    * Process a single hand's landmarks and extract metrics
    */
   private processHand(landmarks: HandLandmarks[]): HandData {
+    // Validate that we have a valid landmarks array with required indices
+    if (!landmarks || landmarks.length < 21) {
+      // Return default hand data if landmarks are incomplete
+      return {
+        detected: false,
+        centerY: 0.5,
+        centerX: 0.5,
+        openness: 0,
+        isPinched: false,
+        pinchUp: false,
+        pinchDown: false,
+        pinchPinky: false,
+        pinchRing: false
+      };
+    }
+
+    // Validate critical landmarks exist
+    const requiredIndices = [0, 4, 5, 8, 9, 12, 13, 16, 17, 20];
+    const missingLandmarks = requiredIndices.filter(idx => !landmarks[idx]);
+    
+    if (missingLandmarks.length > 0) {
+      // Return default hand data if critical landmarks are missing
+      return {
+        detected: false,
+        centerY: 0.5,
+        centerX: 0.5,
+        openness: 0,
+        isPinched: false,
+        pinchUp: false,
+        pinchDown: false,
+        pinchPinky: false,
+        pinchRing: false
+      };
+    }
+
     // Calculate hand center y-coordinate
     const wrist = landmarks[0];
-    const palmLandmarks = [landmarks[0], landmarks[5], landmarks[9], landmarks[13], landmarks[17]];
-    const palmCenterY = palmLandmarks.reduce((sum, lm) => sum + lm.y, 0) / palmLandmarks.length;
+    const palmLandmarks = [landmarks[0], landmarks[5], landmarks[9], landmarks[13], landmarks[17]].filter(lm => lm !== undefined);
+    
+    if (palmLandmarks.length === 0) {
+      return {
+        detected: false,
+        centerY: 0.5,
+        centerX: 0.5,
+        openness: 0,
+        isPinched: false,
+        pinchUp: false,
+        pinchDown: false,
+        pinchPinky: false,
+        pinchRing: false
+      };
+    }
+    
+    const palmCenterY = palmLandmarks.reduce((sum, lm) => sum + (lm?.y ?? 0), 0) / palmLandmarks.length;
     const handCenterY = (wrist.y + palmCenterY) / 2;
     
     // Calculate hand center x-coordinate
-    const palmCenterX = palmLandmarks.reduce((sum, lm) => sum + lm.x, 0) / palmLandmarks.length;
+    const palmCenterX = palmLandmarks.reduce((sum, lm) => sum + (lm?.x ?? 0), 0) / palmLandmarks.length;
     const handCenterX = (wrist.x + palmCenterX) / 2;
 
     // Calculate hand openness
@@ -121,10 +172,25 @@ export class HandTracker {
       landmarks[12], // Middle finger tip
       landmarks[16], // Ring finger tip
       landmarks[20]  // Pinky tip
-    ];
+    ].filter(tip => tip !== undefined);
+
+    if (fingertips.length === 0) {
+      return {
+        detected: false,
+        centerY: handCenterY,
+        centerX: handCenterX,
+        openness: 0,
+        isPinched: false,
+        pinchUp: false,
+        pinchDown: false,
+        pinchPinky: false,
+        pinchRing: false
+      };
+    }
 
     const palmCenter = { x: palmCenterX, y: palmCenterY };
     const distances = fingertips.map(tip => {
+      if (!tip) return 0;
       const dx = tip.x - palmCenter.x;
       const dy = tip.y - palmCenter.y;
       return Math.sqrt(dx * dx + dy * dy);
@@ -139,7 +205,23 @@ export class HandTracker {
     const thumbTip = landmarks[4];
     const indexTip = landmarks[8];
     const middleTip = landmarks[12];
+    const ringTip = landmarks[16];
     const pinkyTip = landmarks[20];
+    
+    // Validate all pinch landmarks exist before calculating distances
+    if (!thumbTip || !indexTip || !middleTip || !ringTip || !pinkyTip) {
+      return {
+        detected: true,
+        centerY: handCenterY,
+        centerX: handCenterX,
+        openness: normalizedOpenness,
+        isPinched: false,
+        pinchUp: false,
+        pinchDown: false,
+        pinchPinky: false,
+        pinchRing: false
+      };
+    }
     
     // Thumb-Index pinch (for pitch up +1)
     const thumbIndexDistance = Math.sqrt(
@@ -153,6 +235,12 @@ export class HandTracker {
       Math.pow(thumbTip.y - middleTip.y, 2)
     );
     
+    // Thumb-Ring pinch (for chord extension toggle)
+    const thumbRingDistance = Math.sqrt(
+      Math.pow(thumbTip.x - ringTip.x, 2) + 
+      Math.pow(thumbTip.y - ringTip.y, 2)
+    );
+    
     // Thumb-Pinky pinch (for pitch up/down ±2)
     const thumbPinkyDistance = Math.sqrt(
       Math.pow(thumbTip.x - pinkyTip.x, 2) + 
@@ -162,8 +250,9 @@ export class HandTracker {
     const pinchThreshold = 0.03;
     const pinchUp = thumbIndexDistance < pinchThreshold;
     const pinchDown = thumbMiddleDistance < pinchThreshold;
+    const pinchRing = thumbRingDistance < pinchThreshold;
     const pinchTwo = thumbPinkyDistance < pinchThreshold;
-    const isPinched = pinchUp || pinchDown || pinchTwo; // General pinch state (any type)
+    const isPinched = pinchUp || pinchDown || pinchRing || pinchTwo; // General pinch state (any type)
     
 
     return {
@@ -174,7 +263,8 @@ export class HandTracker {
       isPinched: isPinched,
       pinchUp: pinchUp,
       pinchDown: pinchDown,
-      pinchPinky: pinchTwo
+      pinchPinky: pinchTwo,
+      pinchRing: pinchRing
     };
   }
 
@@ -195,7 +285,8 @@ export class HandTracker {
       isPinched: false,
       pinchUp: false,
       pinchDown: false,
-      pinchPinky: false
+      pinchPinky: false,
+      pinchRing: false
     };
 
     let leftHandData: HandData = { ...defaultHand };
@@ -205,37 +296,48 @@ export class HandTracker {
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
       // Process each detected hand
       results.multiHandLandmarks.forEach((landmarks: HandLandmarks[], index: number) => {
-        const handData = this.processHand(landmarks);
-        const wristX = landmarks[0].x;
-        
-        // Determine if this is left or right hand
-        let isRight = false;
-        
-        // Try to use MediaPipe's handedness classification first
-        if (results.multiHandedness && 
-            results.multiHandedness[index] && 
-            results.multiHandedness[index].categoryName) {
-          const categoryName = results.multiHandedness[index].categoryName;
-          // MediaPipe's handedness is from the hand's own perspective
-          // 'Right' means it's the person's right hand
-          if (typeof categoryName === 'string') {
-            isRight = categoryName.toLowerCase().includes('right');
+        try {
+          // Validate landmarks array before processing
+          if (!landmarks || landmarks.length === 0 || !landmarks[0]) {
+            return; // Skip this hand if landmarks are invalid
+          }
+
+          const handData = this.processHand(landmarks);
+          const wristX = landmarks[0]?.x ?? 0.5;
+          
+          // Determine if this is left or right hand
+          let isRight = false;
+          
+          // Try to use MediaPipe's handedness classification first
+          if (results.multiHandedness && 
+              results.multiHandedness[index] && 
+              results.multiHandedness[index].categoryName) {
+            const categoryName = results.multiHandedness[index].categoryName;
+            // MediaPipe's handedness is from the hand's own perspective
+            // 'Right' means it's the person's right hand
+            if (typeof categoryName === 'string') {
+              isRight = categoryName.toLowerCase().includes('right');
+            } else {
+              // Fallback to screen position if categoryName is not a string
+              isRight = wristX < 0.5;
+            }
           } else {
-            // Fallback to screen position if categoryName is not a string
+            // Fallback: use screen position
+            // Note: Video is mirrored, so right hand appears on left side (x < 0.5)
+            // But MediaPipe's handedness should be more reliable, so this is just a fallback
             isRight = wristX < 0.5;
           }
-        } else {
-          // Fallback: use screen position
-          // Note: Video is mirrored, so right hand appears on left side (x < 0.5)
-          // But MediaPipe's handedness should be more reliable, so this is just a fallback
-          isRight = wristX < 0.5;
-        }
 
-        // Assign to appropriate hand data structure
-        if (isRight) {
-          rightHandData = handData;
-        } else {
-          leftHandData = handData;
+          // Assign to appropriate hand data structure
+          if (isRight) {
+            rightHandData = handData;
+          } else {
+            leftHandData = handData;
+          }
+        } catch (error) {
+          // Silently handle errors for individual hands - don't break the entire tracking
+          // The default hand data will be used instead
+          console.warn('Error processing hand landmarks (non-critical):', error);
         }
       });
     }

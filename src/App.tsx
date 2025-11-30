@@ -14,8 +14,10 @@ function App() {
   
   // Hand tracking state - separate left and right hands
   const [leftHandDetected, setLeftHandDetected] = useState(false);
+  const [leftHandCenterY, setLeftHandCenterY] = useState<number | null>(null); // Left hand Y position for LFO depth control
   const [leftHandPinchDown, setLeftHandPinchDown] = useState(false); // Left hand thumb-index pinch for pitch down -1
   const [leftHandPinchPinky, setLeftHandPinchPinky] = useState(false); // Left hand thumb-pinky pinch for pitch down -2
+  const [leftHandPinchRing, setLeftHandPinchRing] = useState(false); // Left hand thumb-ring pinch for chord extension toggle
   
   const [rightHandDetected, setRightHandDetected] = useState(false);
   const [rightHandCenterY, setRightHandCenterY] = useState<number | null>(null);
@@ -26,7 +28,8 @@ function App() {
   // Pitch mode state
   const [pitchMode, setPitchMode] = useState(false);
   const [rootMidi, setRootMidi] = useState(48); // C4, default to C minor 7
-  const [chordQuality, setChordQuality] = useState<'minor7' | 'major7'>('minor7');
+  const [chordExtension, setChordExtension] = useState<7 | 9>(7); // 7th or 9th chord
+  const [chordQuality, setChordQuality] = useState<'minor' | 'major'>('minor'); // Minor or major
   
   // Refs
   const synthEngineRef = useRef<SynthEngine | null>(null);
@@ -39,14 +42,18 @@ function App() {
   // Smoothing for hand tracking (to avoid jitter)
   const smoothedRightHandCenterYRef = useRef<number>(0.5);
   const smoothedRightHandCenterXRef = useRef<number>(0.5);
+  const smoothedLeftHandCenterYRef = useRef<number>(0.5);
   
   // Pitch mode tracking - track previous pinch states to detect transitions
   const previousRightPinchUpRef = useRef<boolean>(false);
   const previousLeftPinchDownRef = useRef<boolean>(false);
   const previousRightPinchPinkyRef = useRef<boolean>(false);
   const previousLeftPinchPinkyRef = useRef<boolean>(false);
+  const previousLeftPinchRingRef = useRef<boolean>(false);
   const lastPitchChangeTimeRef = useRef<number>(0);
+  const lastChordToggleTimeRef = useRef<number>(0);
   const PITCH_CHANGE_DEBOUNCE_MS = 500; // 0.5 seconds delay between pitch changes
+  const CHORD_TOGGLE_DEBOUNCE_MS = 300; // 0.3 seconds delay between chord toggles
 
   // Initialize synth engine on mount
   useEffect(() => {
@@ -129,6 +136,8 @@ function App() {
     if (anyHandDetected) {
       // Hands detected - ensure oscillators are running and fade in
       if (!isPlaying) {
+        // Set chord from state before starting
+        synth.setChord(rootMidi, chordExtension, chordQuality);
         // Start oscillators if not already started
         synth.start();
         setIsPlaying(true);
@@ -144,7 +153,7 @@ function App() {
         synth.fadeOut();
       }
     }
-  }, [leftHandDetected, rightHandDetected, isSynthInitialized, isPlaying]);
+  }, [leftHandDetected, rightHandDetected, isSynthInitialized, isPlaying, rootMidi, chordExtension, chordQuality]);
 
   // ===== HAND TRACKING INITIALIZATION =====
   useEffect(() => {
@@ -172,8 +181,10 @@ function App() {
           
           // Update state with hand detection results - separate left and right
           setLeftHandDetected(result.leftHand.detected);
+          setLeftHandCenterY(result.leftHand.detected ? result.leftHand.centerY : null);
           setLeftHandPinchDown(result.leftHand.detected ? result.leftHand.pinchUp : false); // Left thumb-index = pitch down -1
           setLeftHandPinchPinky(result.leftHand.detected ? result.leftHand.pinchPinky : false); // Left thumb-pinky = pitch down -2
+          setLeftHandPinchRing(result.leftHand.detected ? result.leftHand.pinchRing : false); // Left thumb-ring = chord extension toggle
           
           setRightHandDetected(result.rightHand.detected);
           setRightHandCenterY(result.rightHand.detected ? result.rightHand.centerY : null);
@@ -238,42 +249,42 @@ function App() {
     // Right hand pitch up +2 (thumb-pinky) - takes priority over +1
     if (rightPinchPinkyJustActivated && canChangePitch) {
       const newRootMidi = Math.min(84, rootMidi + 2);
-      // Keep same chord quality (minor7 stays minor7, major7 stays major7)
+      // Keep same chord extension and quality
       
       setRootMidi(newRootMidi);
-      synth.setChord(newRootMidi, chordQuality);
+      synth.setChord(newRootMidi, chordExtension, chordQuality);
       setPitchMode(true);
       lastPitchChangeTimeRef.current = now;
     }
     // Left hand pitch down -2 (thumb-pinky) - takes priority over -1
     else if (leftPinchPinkyJustActivated && canChangePitch) {
       const newRootMidi = Math.max(36, rootMidi - 2);
-      // Keep same chord quality (minor7 stays minor7, major7 stays major7)
+      // Keep same chord extension and quality
       
       setRootMidi(newRootMidi);
-      synth.setChord(newRootMidi, chordQuality);
+      synth.setChord(newRootMidi, chordExtension, chordQuality);
       setPitchMode(true);
       lastPitchChangeTimeRef.current = now;
     }
     // Right hand pitch up +1 (thumb-index) - only if pinky not active
     else if (rightPinchUpJustActivated && canChangePitch && !rightHandPinchPinky) {
       const newRootMidi = Math.min(84, rootMidi + 1);
-      const newQuality: 'minor7' | 'major7' = chordQuality === 'minor7' ? 'major7' : 'minor7';
+      const newQuality: 'minor' | 'major' = chordQuality === 'minor' ? 'major' : 'minor';
       
       setRootMidi(newRootMidi);
       setChordQuality(newQuality);
-      synth.setChord(newRootMidi, newQuality);
+      synth.setChord(newRootMidi, chordExtension, newQuality);
       setPitchMode(true);
       lastPitchChangeTimeRef.current = now;
     }
     // Left hand pitch down -1 (thumb-index) - only if pinky not active
     else if (leftPinchDownJustActivated && canChangePitch && !leftHandPinchPinky) {
       const newRootMidi = Math.max(36, rootMidi - 1);
-      const newQuality: 'minor7' | 'major7' = chordQuality === 'minor7' ? 'major7' : 'minor7';
+      const newQuality: 'minor' | 'major' = chordQuality === 'minor' ? 'major' : 'minor';
       
       setRootMidi(newRootMidi);
       setChordQuality(newQuality);
-      synth.setChord(newRootMidi, newQuality);
+      synth.setChord(newRootMidi, chordExtension, newQuality);
       setPitchMode(true);
       lastPitchChangeTimeRef.current = now;
     }
@@ -290,6 +301,34 @@ function App() {
       setPitchMode(false);
     }
   }, [rightHandPinchUp, leftHandPinchDown, rightHandPinchPinky, leftHandPinchPinky, rightHandDetected, leftHandDetected, isPlaying, rootMidi, chordQuality]);
+
+  // ===== CHORD EXTENSION TOGGLE: LEFT HAND THUMB-RING PINCH =====
+  useEffect(() => {
+    const synth = synthEngineRef.current;
+    if (!synth || !isPlaying) {
+      return;
+    }
+
+    // Check if enough time has passed since last chord toggle (debounce)
+    const now = Date.now();
+    const timeSinceLastToggle = now - lastChordToggleTimeRef.current;
+    const canToggleChord = timeSinceLastToggle >= CHORD_TOGGLE_DEBOUNCE_MS;
+
+    // Left hand: Thumb-Ring pinch → Toggle between 7 and 9 chords
+    const leftPinchRingJustActivated = leftHandDetected && leftHandPinchRing && !previousLeftPinchRingRef.current;
+
+    if (leftPinchRingJustActivated && canToggleChord) {
+      // Toggle between 7 and 9 chords
+      const newExtension: 7 | 9 = chordExtension === 7 ? 9 : 7;
+      
+      setChordExtension(newExtension);
+      synth.setChord(rootMidi, newExtension, chordQuality);
+      lastChordToggleTimeRef.current = now;
+    }
+
+    // Update previous state
+    previousLeftPinchRingRef.current = leftHandDetected && leftHandPinchRing;
+  }, [leftHandPinchRing, leftHandDetected, isPlaying, chordExtension, rootMidi, chordQuality]);
 
   // ===== SPECTRUM VISUALIZATION =====
   useEffect(() => {
@@ -534,6 +573,49 @@ function App() {
     }
   }, [rightHandDetected, rightHandCenterY, rightHandCenterX, isPlaying, pitchMode]);
 
+  // ===== LEFT HAND: LFO DEPTH CONTROL =====
+  useEffect(() => {
+    if (!isPlaying) {
+      return;
+    }
+
+    const synth = synthEngineRef.current;
+    if (!synth) {
+      return;
+    }
+
+    // Smoothing factor (same as right hand)
+    const smoothingFactor = 0.85;
+
+    if (leftHandDetected && leftHandCenterY !== null) {
+      // LEFT HAND DETECTED - Control LFO depth (unless pinching for pitch or chord toggle)
+      
+      // Only control LFO depth if NOT pinching (pitch mode and chord toggle take priority)
+      if (!leftHandPinchDown && !leftHandPinchPinky && !leftHandPinchRing) {
+        // Apply smoothing to left hand center Y
+        smoothedLeftHandCenterYRef.current = 
+          smoothedLeftHandCenterYRef.current * smoothingFactor + 
+          leftHandCenterY * (1 - smoothingFactor);
+
+        // Map left hand Y position to LFO depth:
+        // y=0 (top) → depth = 1.0 (100% - maximum modulation)
+        // y=1 (bottom) → depth = 0.1 (10% - subtle modulation)
+        // Inverted: higher hand = more depth (more modulation)
+        const normalizedY = smoothedLeftHandCenterYRef.current;
+        const minDepth = 0.1; // 10% minimum depth
+        const maxDepth = 1.0; // 100% maximum depth
+        
+        // Linear mapping: top (0.0) = 1.0, bottom (1.0) = 0.1
+        const calculatedDepth = maxDepth - (normalizedY * (maxDepth - minDepth));
+
+        synth.setLfoDepth(calculatedDepth);
+      }
+    } else {
+      // NO LEFT HAND DETECTED - Use default depth
+      synth.setLfoDepth(1.0); // Default to full depth
+    }
+  }, [leftHandDetected, leftHandCenterY, isPlaying, leftHandPinchDown, leftHandPinchPinky, leftHandPinchRing]);
+
   // ===== CAMERA LOGIC =====
   const handleEnableCamera = async () => {
     if (isCameraActive) {
@@ -579,8 +661,8 @@ function App() {
       <div className="container">
         <div className="left-panel">
           <div className="header"> 
-            <h1>mako isnt stopping</h1>
-            <p className="subtitle">yeah i made a hand-controlled synth</p>
+            <h1>harolds synth</h1>
+            <p className="subtitle">i made a hand controlled synth</p>
           </div>
 
           <div className="controls">
@@ -604,6 +686,34 @@ function App() {
             </div>
           )}
 
+          <div className="chord-extension-controls">
+            <div className="chord-extension-label">Chord Extension:</div>
+            <div className="chord-extension-buttons">
+              <button
+                className={`chord-extension-button ${chordExtension === 7 ? 'active' : ''}`}
+                onClick={() => {
+                  setChordExtension(7);
+                  if (synthEngineRef.current && isSynthInitialized) {
+                    synthEngineRef.current.setChord(rootMidi, 7, chordQuality);
+                  }
+                }}
+              >
+                7
+              </button>
+              <button
+                className={`chord-extension-button ${chordExtension === 9 ? 'active' : ''}`}
+                onClick={() => {
+                  setChordExtension(9);
+                  if (synthEngineRef.current && isSynthInitialized) {
+                    synthEngineRef.current.setChord(rootMidi, 9, chordQuality);
+                  }
+                }}
+              >
+                9
+              </button>
+            </div>
+          </div>
+
           <div className="debug-info">
             <div className="debug-item">
               <span className="label">Chord:</span>
@@ -611,7 +721,9 @@ function App() {
                 {(() => {
                   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
                   const note = noteNames[rootMidi % 12];
-                  return `${note}${chordQuality}`;
+                  const qualitySymbol = chordQuality === 'minor' ? 'm' : '';
+                  const extensionSymbol = chordExtension === 7 ? '7' : '9';
+                  return `${note}${qualitySymbol}${extensionSymbol}`;
                 })()}
               </span>
             </div>
