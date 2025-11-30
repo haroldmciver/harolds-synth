@@ -24,6 +24,7 @@ function App() {
   const [rightHandCenterX, setRightHandCenterX] = useState<number | null>(null);
   const [rightHandPinchUp, setRightHandPinchUp] = useState(false); // Right hand thumb-index pinch for pitch up +1
   const [rightHandPinchPinky, setRightHandPinchPinky] = useState(false); // Right hand thumb-pinky pinch for pitch up +2
+  const [rightHandPinchRing, setRightHandPinchRing] = useState(false); // Right hand thumb-ring pinch for chord quality toggle (minor/major)
   
   // Pitch mode state
   const [pitchMode, setPitchMode] = useState(false);
@@ -51,10 +52,13 @@ function App() {
   const previousRightPinchPinkyRef = useRef<boolean>(false);
   const previousLeftPinchPinkyRef = useRef<boolean>(false);
   const previousLeftPinchRingRef = useRef<boolean>(false);
+  const previousRightPinchRingRef = useRef<boolean>(false);
   const lastPitchChangeTimeRef = useRef<number>(0);
   const lastChordToggleTimeRef = useRef<number>(0);
+  const lastQualityToggleTimeRef = useRef<number>(0);
   const PITCH_CHANGE_DEBOUNCE_MS = 500; // 0.5 seconds delay between pitch changes
   const CHORD_TOGGLE_DEBOUNCE_MS = 300; // 0.3 seconds delay between chord toggles
+  const QUALITY_TOGGLE_DEBOUNCE_MS = 300; // 0.3 seconds delay between quality toggles
 
   // Initialize synth engine on mount
   useEffect(() => {
@@ -192,6 +196,7 @@ function App() {
           setRightHandCenterX(result.rightHand.detected ? result.rightHand.centerX : null);
           setRightHandPinchUp(result.rightHand.detected ? result.rightHand.pinchUp : false); // Right thumb-index = pitch up +1
           setRightHandPinchPinky(result.rightHand.detected ? result.rightHand.pinchPinky : false); // Right thumb-pinky = pitch up +2
+          setRightHandPinchRing(result.rightHand.detected ? result.rightHand.pinchRing : false); // Right thumb-ring = chord quality toggle (minor/major)
         });
       } catch (error) {
         // Only set error if still mounted
@@ -330,6 +335,34 @@ function App() {
     // Update previous state
     previousLeftPinchRingRef.current = leftHandDetected && leftHandPinchRing;
   }, [leftHandPinchRing, leftHandDetected, isPlaying, chordExtension, rootMidi, chordQuality]);
+
+  // ===== CHORD QUALITY TOGGLE: RIGHT HAND THUMB-RING PINCH =====
+  useEffect(() => {
+    const synth = synthEngineRef.current;
+    if (!synth || !isPlaying) {
+      return;
+    }
+
+    // Check if enough time has passed since last quality toggle (debounce)
+    const now = Date.now();
+    const timeSinceLastToggle = now - lastQualityToggleTimeRef.current;
+    const canToggleQuality = timeSinceLastToggle >= QUALITY_TOGGLE_DEBOUNCE_MS;
+
+    // Right hand: Thumb-Ring pinch → Toggle between minor and major
+    const rightPinchRingJustActivated = rightHandDetected && rightHandPinchRing && !previousRightPinchRingRef.current;
+
+    if (rightPinchRingJustActivated && canToggleQuality) {
+      // Toggle between minor and major
+      const newQuality: 'minor' | 'major' = chordQuality === 'minor' ? 'major' : 'minor';
+      
+      setChordQuality(newQuality);
+      synth.setChord(rootMidi, chordExtension, newQuality);
+      lastQualityToggleTimeRef.current = now;
+    }
+
+    // Update previous state
+    previousRightPinchRingRef.current = rightHandDetected && rightHandPinchRing;
+  }, [rightHandPinchRing, rightHandDetected, isPlaying, chordExtension, rootMidi, chordQuality]);
 
   // ===== SPECTRUM VISUALIZATION =====
   useEffect(() => {
@@ -756,6 +789,7 @@ function App() {
                     <h3>Chord Control</h3>
                     <ul>
                       <li><strong>Left Thumb + Ring:</strong> Switch 7th / 9th Chord</li>
+                      <li><strong>Right Thumb + Ring:</strong> Switch Minor / Major</li>
                     </ul>
                   </div>
 
