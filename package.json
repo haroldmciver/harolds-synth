@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test-build": "node test-build.js"
   },
   "dependencies": {
     "@mediapipe/hands": "^0.4.1675469240",

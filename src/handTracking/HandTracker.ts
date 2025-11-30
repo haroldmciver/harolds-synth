@@ -2,9 +2,6 @@
  * HandTracker - MediaPipe Hands integration for hand detection and landmark extraction
  */
 
-// Import MediaPipe Hands - it exports as default in ES modules
-import MediaPipeHands from '@mediapipe/hands';
-
 export interface HandLandmarks {
   x: number;
   y: number;
@@ -42,11 +39,80 @@ export class HandTracker {
     this.videoElement = videoElement;
     this.onResultsCallback = onResults;
 
-    // In ES modules, Hands is on the default export
-    const Hands = MediaPipeHands.Hands;
+    // Use dynamic import to ensure it works correctly in production builds
+    // MediaPipe exports Hands on the default export in ES modules
+    // Vite may transform the exports, so we need to handle multiple cases
+    const mediaPipeModule = await import('@mediapipe/hands');
+    
+    // Try multiple ways to access Hands class
+    // 1. Default export with Hands property (normal ES module)
+    // 2. Direct Hands export (named export)
+    // 3. Check if default is an object with Hands
+    // 4. Check for transformed exports (Vite may rename)
+    let Hands: any = null;
+    
+    // Method 1: default.Hands
+    if (mediaPipeModule.default?.Hands && typeof mediaPipeModule.default.Hands === 'function') {
+      Hands = mediaPipeModule.default.Hands;
+    }
+    // Method 2: Direct Hands export
+    else if (mediaPipeModule.Hands && typeof mediaPipeModule.Hands === 'function') {
+      Hands = mediaPipeModule.Hands;
+    }
+    // Method 3: Check if default itself is the Hands class (unlikely but possible)
+    else if (typeof mediaPipeModule.default === 'function' && (mediaPipeModule.default as any).prototype) {
+      Hands = mediaPipeModule.default;
+    }
+    // Method 5: Check global scope (window.Hands) - common for UMD modules
+    else if (typeof window !== 'undefined' && (window as any).Hands) {
+      Hands = (window as any).Hands;
+    }
+    // Method 6: Check globalThis.Hands
+    else if (typeof globalThis !== 'undefined' && (globalThis as any).Hands) {
+      Hands = (globalThis as any).Hands;
+    }
+    // Method 4: Search through all exports for a constructor function
+    else {
+      const allKeys = Object.keys(mediaPipeModule);
+      for (const key of allKeys) {
+        const value = (mediaPipeModule as any)[key];
+        // Check if it's a class/constructor that might be Hands
+        if (typeof value === 'function' && value.prototype && 
+            (key.toLowerCase().includes('hand') || value.name === 'Hands' || value.name === 'lr')) {
+          Hands = value;
+          break;
+        }
+        // Check if it's an object with Hands property
+        if (value && typeof value === 'object' && value.Hands && typeof value.Hands === 'function') {
+          Hands = value.Hands;
+          break;
+        }
+      }
+    }
     
     if (!Hands || typeof Hands !== 'function') {
-      throw new Error('MediaPipe Hands class not available');
+      // Enhanced error reporting
+      const debugInfo = {
+        hasDefault: !!mediaPipeModule.default,
+        defaultType: typeof mediaPipeModule.default,
+        defaultKeys: mediaPipeModule.default && typeof mediaPipeModule.default === 'object' 
+          ? Object.keys(mediaPipeModule.default) : [],
+        moduleKeys: Object.keys(mediaPipeModule),
+        windowHands: typeof window !== 'undefined' ? typeof (window as any).Hands : 'undefined',
+        globalHands: typeof globalThis !== 'undefined' ? typeof (globalThis as any).Hands : 'undefined',
+        moduleValues: Object.keys(mediaPipeModule).reduce((acc, key) => {
+          const val = (mediaPipeModule as any)[key];
+          acc[key] = {
+            type: typeof val,
+            isFunction: typeof val === 'function',
+            name: typeof val === 'function' ? val.name : undefined,
+            hasHands: val && typeof val === 'object' && 'Hands' in val
+          };
+          return acc;
+        }, {} as any)
+      };
+      console.error('MediaPipe module debug info:', debugInfo);
+      throw new Error('MediaPipe Hands class not found. Module keys: ' + Object.keys(mediaPipeModule).join(', '));
     }
 
     this.hands = new Hands({

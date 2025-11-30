@@ -21,9 +21,16 @@ export default defineConfig({
       output: {
         manualChunks: {
           'mediapipe-hands': ['@mediapipe/hands']
-        }
+        },
+        // Preserve module structure for MediaPipe
+        format: 'es',
+        preserveModules: false
       }
     }
+  },
+  // Ensure MediaPipe is not transformed incorrectly
+  ssr: {
+    noExternal: ['@mediapipe/hands']
   }
 })
 
