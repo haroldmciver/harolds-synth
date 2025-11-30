@@ -56,6 +56,13 @@ h1 {
   gap: 12px;
 }
 
+.chord-controls-row {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
 .chord-extension-controls {
   display: flex;
   flex-direction: column;
@@ -332,82 +339,129 @@ h1 {
 /* Mobile view */
 @media (max-width: 768px) {
   .app {
-    padding: 20px 16px;
-    padding-bottom: 40px;
+    padding: 12px 16px;
+    padding-bottom: 30px;
   }
 
   .container {
-    gap: 20px;
+    gap: 16px;
   }
 
   .left-panel {
     min-width: unset;
-    gap: 20px;
+    gap: 12px;
   }
 
   h1 {
-    font-size: 2rem;
+    font-size: 1.75rem;
   }
 
   .subtitle {
-    font-size: 0.9rem;
-  }
-
-  .chord-extension-label {
     font-size: 0.85rem;
   }
 
-  .chord-extension-button {
-    padding: 10px 14px;
-    font-size: 1rem;
+  .controls {
+    gap: 8px;
   }
 
   .start-stop-button,
   .camera-button {
-    padding: 10px 24px;
-    font-size: 1rem;
+    padding: 8px 20px;
+    font-size: 0.9rem;
+  }
+
+  /* Horizontal layout for chord extensions, chord display, and help button */
+  .chord-controls-row {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .chord-extension-controls {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .chord-extension-label {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .chord-extension-buttons {
+    gap: 6px;
+  }
+
+  .chord-extension-button {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 40px;
   }
 
   .debug-info {
-    padding: 12px;
-    font-size: 0.9rem;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .debug-item {
+    padding: 0;
+    gap: 6px;
   }
 
   .label,
   .value {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+  }
+
+  .help-container {
+    flex-direction: column;
+    gap: 8px;
+    flex: 0 0 auto;
+    position: relative;
   }
 
   .help-button {
-    width: 28px;
-    height: 28px;
-    font-size: 1rem;
+    width: 24px;
+    height: 24px;
+    font-size: 0.85rem;
+  }
+
+  /* Instructions will appear below the row when shown */
+  .help-container .inline-instructions {
+    width: 100%;
+    margin-top: 8px;
   }
 
   .inline-instructions {
-    padding: 12px;
-    gap: 12px;
+    padding: 10px;
+    gap: 10px;
   }
 
   .instruction-section h3 {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
   .instruction-section ul {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .instruction-note {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .error-message {
-    font-size: 0.85rem;
-    padding: 10px 16px;
+    font-size: 0.8rem;
+    padding: 8px 12px;
   }
 
   .spectrum-container {
     height: 140px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 }

@@ -687,91 +687,93 @@ function App() {
             </div>
           )}
 
-          <div className="chord-extension-controls">
-            <div className="chord-extension-label">Chord Extension:</div>
-            <div className="chord-extension-buttons">
-              <button
-                className={`chord-extension-button ${chordExtension === 7 ? 'active' : ''}`}
-                onClick={() => {
-                  setChordExtension(7);
-                  if (synthEngineRef.current && isSynthInitialized) {
-                    synthEngineRef.current.setChord(rootMidi, 7, chordQuality);
-                  }
-                }}
-              >
-                7
-              </button>
-              <button
-                className={`chord-extension-button ${chordExtension === 9 ? 'active' : ''}`}
-                onClick={() => {
-                  setChordExtension(9);
-                  if (synthEngineRef.current && isSynthInitialized) {
-                    synthEngineRef.current.setChord(rootMidi, 9, chordQuality);
-                  }
-                }}
-              >
-                9
-              </button>
-            </div>
-          </div>
-
-          <div className="debug-info">
-            <div className="debug-item">
-              <span className="label">Chord:</span>
-              <span className="value">
-                {(() => {
-                  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-                  const note = noteNames[rootMidi % 12];
-                  const qualitySymbol = chordQuality === 'minor' ? 'm' : '';
-                  const extensionSymbol = chordExtension === 7 ? '7' : '9';
-                  return `${note}${qualitySymbol}${extensionSymbol}`;
-                })()}
-              </span>
-            </div>
-          </div>
-
-          <div className="help-container">
-            <button 
-              className={`help-button ${showInstructions ? 'active' : ''}`}
-              onClick={() => setShowInstructions(!showInstructions)}
-              title="How to play"
-            >
-              ?
-            </button>
-
-            {showInstructions && (
-              <div className="inline-instructions">
-                <div className="instruction-section">
-                  <h3>Pitch Control </h3>
-                  <ul>
-                    <li><strong>Right Thumb + Index:</strong> +1 </li>
-                    <li><strong>Right Thumb + Pinky:</strong> +2 </li>
-                    <li><strong>Left Thumb + Index:</strong> -1 </li>
-                    <li><strong>Left Thumb + Pinky:</strong> -2 </li>
-                  </ul>
-                </div>
-                
-                <div className="instruction-section">
-                  <h3>Chord Control</h3>
-                  <ul>
-                    <li><strong>Left Thumb + Ring:</strong> Switch 7th / 9th Chord</li>
-                  </ul>
-                </div>
-
-                <div className="instruction-section">
-                  <h3>Effects (Hand Position)</h3>
-                  <ul>
-                    <li><strong>Right Hand X:</strong> LFO Rate</li>
-                    <li><strong>Right Hand Y:</strong> Filter Cutoff</li>
-                    <li><strong>Left Hand Y:</strong> LFO Depth</li>
-                  </ul>
-                </div>
-                
-                <p className="instruction-note">
-                  just move yo hands and tap yo fingers
-                </p>
+          <div className="chord-controls-row">
+            <div className="chord-extension-controls">
+              <div className="chord-extension-label">Chord Extension:</div>
+              <div className="chord-extension-buttons">
+                <button
+                  className={`chord-extension-button ${chordExtension === 7 ? 'active' : ''}`}
+                  onClick={() => {
+                    setChordExtension(7);
+                    if (synthEngineRef.current && isSynthInitialized) {
+                      synthEngineRef.current.setChord(rootMidi, 7, chordQuality);
+                    }
+                  }}
+                >
+                  7
+                </button>
+                <button
+                  className={`chord-extension-button ${chordExtension === 9 ? 'active' : ''}`}
+                  onClick={() => {
+                    setChordExtension(9);
+                    if (synthEngineRef.current && isSynthInitialized) {
+                      synthEngineRef.current.setChord(rootMidi, 9, chordQuality);
+                    }
+                  }}
+                >
+                  9
+                </button>
               </div>
-            )}
+            </div>
+
+            <div className="debug-info">
+              <div className="debug-item">
+                <span className="label">Chord:</span>
+                <span className="value">
+                  {(() => {
+                    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                    const note = noteNames[rootMidi % 12];
+                    const qualitySymbol = chordQuality === 'minor' ? 'm' : '';
+                    const extensionSymbol = chordExtension === 7 ? '7' : '9';
+                    return `${note}${qualitySymbol}${extensionSymbol}`;
+                  })()}
+                </span>
+              </div>
+            </div>
+
+            <div className="help-container">
+              <button 
+                className={`help-button ${showInstructions ? 'active' : ''}`}
+                onClick={() => setShowInstructions(!showInstructions)}
+                title="How to play"
+              >
+                ?
+              </button>
+
+              {showInstructions && (
+                <div className="inline-instructions">
+                  <div className="instruction-section">
+                    <h3>Pitch Control </h3>
+                    <ul>
+                      <li><strong>Right Thumb + Index:</strong> +1 </li>
+                      <li><strong>Right Thumb + Pinky:</strong> +2 </li>
+                      <li><strong>Left Thumb + Index:</strong> -1 </li>
+                      <li><strong>Left Thumb + Pinky:</strong> -2 </li>
+                    </ul>
+                  </div>
+                  
+                  <div className="instruction-section">
+                    <h3>Chord Control</h3>
+                    <ul>
+                      <li><strong>Left Thumb + Ring:</strong> Switch 7th / 9th Chord</li>
+                    </ul>
+                  </div>
+
+                  <div className="instruction-section">
+                    <h3>Effects (Hand Position)</h3>
+                    <ul>
+                      <li><strong>Right Hand X:</strong> LFO Rate</li>
+                      <li><strong>Right Hand Y:</strong> Filter Cutoff</li>
+                      <li><strong>Left Hand Y:</strong> LFO Depth</li>
+                    </ul>
+                  </div>
+                  
+                  <p className="instruction-note">
+                    just move yo hands and tap yo fingers
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
