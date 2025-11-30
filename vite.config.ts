@@ -8,5 +8,15 @@ export default defineConfig({
   // For root domain: use '/' or leave empty
   // For GitHub Pages: use '/repo-name/'
   base: process.env.BASE_PATH || '/',
+  optimizeDeps: {
+    include: ['@mediapipe/hands'],
+    exclude: []
+  },
+  build: {
+    commonjsOptions: {
+      include: [/@mediapipe/, /node_modules/],
+      transformMixedEsModules: true
+    }
+  }
 })
 

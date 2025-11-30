@@ -2,7 +2,8 @@
  * HandTracker - MediaPipe Hands integration for hand detection and landmark extraction
  */
 
-import { Hands } from '@mediapipe/hands';
+// Use dynamic import for MediaPipe to avoid bundling issues in production
+let HandsClass: any = null;
 
 export interface HandLandmarks {
   x: number;
@@ -28,7 +29,7 @@ export interface HandDetectionResult {
 }
 
 export class HandTracker {
-  private hands: Hands | null = null;
+  private hands: any | null = null;
   private videoElement: HTMLVideoElement | null = null;
   private onResultsCallback: ((result: HandDetectionResult) => void) | null = null;
   private animationFrameId: number | null = null;
@@ -41,7 +42,13 @@ export class HandTracker {
     this.videoElement = videoElement;
     this.onResultsCallback = onResults;
 
-    this.hands = new Hands({
+    // Dynamically import MediaPipe Hands to avoid bundling issues
+    if (!HandsClass) {
+      const mediaPipeHands = await import('@mediapipe/hands');
+      HandsClass = mediaPipeHands.Hands;
+    }
+
+    this.hands = new HandsClass({
       locateFile: (file: string) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
       }
