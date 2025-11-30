@@ -742,12 +742,12 @@ function App() {
             {showInstructions && (
               <div className="inline-instructions">
                 <div className="instruction-section">
-                  <h3>Pitch Control (Pinch Gestures)</h3>
+                  <h3>Pitch Control </h3>
                   <ul>
-                    <li><strong>Right Thumb + Index:</strong> +1 Semitone</li>
-                    <li><strong>Right Thumb + Pinky:</strong> +2 Semitones</li>
-                    <li><strong>Left Thumb + Index:</strong> -1 Semitone</li>
-                    <li><strong>Left Thumb + Pinky:</strong> -2 Semitones</li>
+                    <li><strong>Right Thumb + Index:</strong> +1 </li>
+                    <li><strong>Right Thumb + Pinky:</strong> +2 </li>
+                    <li><strong>Left Thumb + Index:</strong> -1 </li>
+                    <li><strong>Left Thumb + Pinky:</strong> -2 </li>
                   </ul>
                 </div>
                 
@@ -768,7 +768,7 @@ function App() {
                 </div>
                 
                 <p className="instruction-note">
-                  Move hands up/down and side-to-side to explore effects!
+                  just move yo hands and tap yo fingers
                 </p>
               </div>
             )}
