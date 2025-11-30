@@ -328,3 +328,86 @@ h1 {
     width: 100%;
   }
 }
+
+/* Mobile view */
+@media (max-width: 768px) {
+  .app {
+    padding: 20px 16px;
+    padding-bottom: 40px;
+  }
+
+  .container {
+    gap: 20px;
+  }
+
+  .left-panel {
+    min-width: unset;
+    gap: 20px;
+  }
+
+  h1 {
+    font-size: 2rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .chord-extension-label {
+    font-size: 0.85rem;
+  }
+
+  .chord-extension-button {
+    padding: 10px 14px;
+    font-size: 1rem;
+  }
+
+  .start-stop-button,
+  .camera-button {
+    padding: 10px 24px;
+    font-size: 1rem;
+  }
+
+  .debug-info {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .label,
+  .value {
+    font-size: 0.9rem;
+  }
+
+  .help-button {
+    width: 28px;
+    height: 28px;
+    font-size: 1rem;
+  }
+
+  .inline-instructions {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .instruction-section h3 {
+    font-size: 0.9rem;
+  }
+
+  .instruction-section ul {
+    font-size: 0.85rem;
+  }
+
+  .instruction-note {
+    font-size: 0.85rem;
+  }
+
+  .error-message {
+    font-size: 0.85rem;
+    padding: 10px 16px;
+  }
+
+  .spectrum-container {
+    height: 140px;
+    margin-bottom: 16px;
+  }
+}
