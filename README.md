@@ -4,33 +4,24 @@ A hand-controlled synthesizer that uses webcam hand tracking to control audio pa
 
 ## Features
 
-- 🎹 **Hand-controlled synthesizer** - Hands in frame = synth plays, no hands = synth fades out
-- 🎵 **Chord-based drone** - Plays minor7 or major7 chords with smooth transitions
-- 🎚️ **LFO-modulated filter** - Right hand position controls LFO rate and filter cutoff
-- 🎯 **Pitch control** - Pinch gestures for pitch changes:
-  - Thumb-index: ±1 semitone (toggles chord quality)
-  - Thumb-pinky: ±2 semitones (keeps chord quality)
-- 📹 **Webcam hand tracking** - Uses MediaPipe Hands for real-time gesture recognition
-- 🎨 **Visual feedback** - Real-time spectrum analyzer and video preview
+- Hand-controlled playback - synth plays when hands are detected, fades out when hands leave frame
+- Chord-based drone - plays minor7 or major7 chords with smooth pitch transitions
+- LFO-modulated filter - right hand position controls LFO rate (X-axis) and filter cutoff frequency (Y-axis)
+- Pitch control via pinch gestures:
+  - Right thumb-index: +1 semitone (toggles chord quality)
+  - Left thumb-index: -1 semitone (toggles chord quality)
+  - Right thumb-pinky: +2 semitones (keeps chord quality)
+  - Left thumb-pinky: -2 semitones (keeps chord quality)
+- Real-time visualization - spectrum analyzer and webcam preview
 
-## How to Use
+## Usage
 
-1. Click the 🎹 button to initialize the synth
-2. Click the 📷 button to enable your webcam
-3. Put your hands in frame to start playing
-4. Move your right hand to control LFO rate (X-axis) and filter cutoff (Y-axis)
-5. Use pinch gestures to change pitch:
-   - Right thumb-index: +1 semitone
-   - Left thumb-index: -1 semitone
-   - Right thumb-pinky: +2 semitones
-   - Left thumb-pinky: -2 semitones
-
-## Tech Stack
-
-- React + TypeScript
-- Vite
-- Web Audio API
-- MediaPipe Hands
+1. Click the piano button to initialize the synth engine
+2. Click the camera button to enable webcam
+3. Put hands in frame to start playing
+4. Move right hand horizontally to adjust LFO rate
+5. Move right hand vertically to adjust filter cutoff
+6. Use pinch gestures to change pitch (see features above)
 
 ## Installation
 
@@ -48,6 +39,12 @@ src/
   ├── handTracking/
   │   └── HandTracker.ts     # MediaPipe Hands integration
   ├── App.tsx                # Main component with hand tracking and synth control
-  ├── App.css                # Styles
   └── main.tsx               # Entry point
 ```
+
+## Tech Stack
+
+- React + TypeScript
+- Vite
+- Web Audio API
+- MediaPipe Hands
